@@ -26,6 +26,9 @@ export class VariableProcessor {
             result += request.substring(lastIndex, match.index);
             lastIndex = variableReferenceRegex.lastIndex;
             const name = match[1].trim();
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'variableProcessor.ts:28',message:'Variable detected',data:{varName:name,isFaker:name.startsWith('$faker')},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'F'})}).catch(()=>{});
+            // #endregion
             const document = getCurrentTextDocument();
             const context = { rawRequest: request, parsedRequest: result };
             for (const [provider, cacheable] of this.providers) {
@@ -33,8 +36,18 @@ export class VariableProcessor {
                     result += resolvedVariables.get(name);
                     continue variable;
                 }
+                // #region agent log
+                const providerType = provider.type;
+                fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'variableProcessor.ts:36',message:'Checking provider',data:{varName:name,providerType:providerType},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
                 if (await provider.has(name, document, context)) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'variableProcessor.ts:40',message:'Provider has variable',data:{varName:name,providerType:providerType},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+                    // #endregion
                     const { value, error, warning } = await provider.get(name, document, context);
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'variableProcessor.ts:44',message:'Provider returned',data:{varName:name,value:value,error:error,warning:warning},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
                     if (!error && !warning) {
                         if (cacheable) {
                             resolvedVariables.set(name, value as string);

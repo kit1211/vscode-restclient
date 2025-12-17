@@ -16,6 +16,7 @@ import { CALLBACK_PORT, OidcClient } from '../auth/oidcClient';
 import { HttpClient } from '../httpClient';
 import { EnvironmentVariableProvider } from './environmentVariableProvider';
 import { HttpVariable, HttpVariableContext, HttpVariableProvider } from './httpVariableProvider';
+import { faker } from '@faker-js/faker';
 
 const uuidv4 = require('uuid/v4');
 
@@ -40,6 +41,7 @@ export class SystemVariableProvider implements HttpVariableProvider {
 
     private readonly aadRegex: RegExp = new RegExp(`\\s*\\${Constants.AzureActiveDirectoryVariableName}(\\s+(${Constants.AzureActiveDirectoryForceNewOption}))?(\\s+(ppe|public|cn|de|us))?(\\s+([^\\.]+\\.[^\\}\\s]+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))?(\\s+aud:([^\\.]+\\.[^\\}\\s]+|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}))?\\s*`);
     private readonly oidcRegex: RegExp = new RegExp(`\\s*(\\${Constants.OidcVariableName})(?:\\s+(${Constants.OIdcForceNewOption}))?(?:\\s*clientId:([\\w|.|:|/|_|-]+))?(?:\\s*issuer:([\\w|.|:|/]+))?(?:\\s*callbackDomain:([\\w|.|:|/|_|-]+))?(?:\\s*callbackPort:([\\w|_]+))?(?:\\s*authorizeEndpoint:([\\w|.|:|/|_|-]+))?(?:\\s*tokenEndpoint:([\\w|.|:|/|_|-]+))?(?:\\s*scopes:([\\w|.|:|/|_|-]+))?(?:\\s*audience:([\\w|.|:|/|_|-]+))?`);
+    private readonly fakerRegex: RegExp = new RegExp(`\\${Constants.FakerVariableName}\\.([\\w.]+)(?:\\s+(.*))?`);
 
     private readonly innerSettingsEnvironmentVariableProvider: EnvironmentVariableProvider =  EnvironmentVariableProvider.Instance;
     private static _instance: SystemVariableProvider;
@@ -64,22 +66,53 @@ export class SystemVariableProvider implements HttpVariableProvider {
         this.registerAadTokenVariable();
         this.registerOidcTokenVariable();
         this.registerAadV2TokenVariable();
+        this.registerFakerVariable();
     }
 
     public readonly type: VariableType = VariableType.System;
 
     public async has(name: string, document: TextDocument): Promise<boolean> {
         const [variableName] = name.split(' ').filter(Boolean);
-        return this.resolveFuncs.has(variableName);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:73',message:'SystemVar has() called',data:{name:name,variableName:variableName,hasFunc:this.resolveFuncs.has(variableName),registeredFuncs:Array.from(this.resolveFuncs.keys())},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+        
+        // Check for exact match first
+        if (this.resolveFuncs.has(variableName)) {
+            return true;
+        }
+        
+        // For compound variables like $faker.internet.email, check if it starts with a registered key
+        for (const key of this.resolveFuncs.keys()) {
+            if (variableName.startsWith(key + '.')) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public async get(name: string, document: TextDocument, context: HttpVariableContext): Promise<HttpVariable> {
         const [variableName] = name.split(' ').filter(Boolean);
+        
+        // Find the matching resolver function key
+        let resolverKey = variableName;
         if (!this.resolveFuncs.has(variableName)) {
-            return { name: variableName, error: ResolveErrorMessage.SystemVariableNotExist };
+            // For compound variables like $faker.internet.email, find the base key
+            let found = false;
+            for (const key of this.resolveFuncs.keys()) {
+                if (variableName.startsWith(key + '.')) {
+                    resolverKey = key;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return { name: variableName, error: ResolveErrorMessage.SystemVariableNotExist };
+            }
         }
 
-        const result = await this.resolveFuncs.get(variableName)!(name, document, context);
+        const result = await this.resolveFuncs.get(resolverKey)!(name, document, context);
         return { name: variableName, ...result };
     }
 
@@ -314,6 +347,57 @@ export class SystemVariableProvider implements HttpVariableProvider {
                 return {value: token};
             });
     }
+
+    private registerFakerVariable() {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:322',message:'registerFakerVariable called',data:{fakerVarName:Constants.FakerVariableName,regexPattern:this.fakerRegex.source},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        this.resolveFuncs.set(Constants.FakerVariableName, async name => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:326',message:'Faker resolver called',data:{name:name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            const groups = this.fakerRegex.exec(name);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:330',message:'Regex exec result',data:{name:name,groups:groups,regexPattern:this.fakerRegex.source},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+            // #endregion
+            if (groups !== null) {
+                const [, path, paramsStr] = groups;
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:335',message:'Regex matched, processing',data:{path:path,paramsStr:paramsStr},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                // #endregion
+                try {
+                    // Navigate to the faker method
+                    const parts = path.split('.');
+                    let target: any = faker;
+                    for (const part of parts) {
+                        target = target[part];
+                        if (!target) {
+                            return { warning: `Faker method not found: ${path}` };
+                        }
+                    }
+                    
+                    // Parse and call with parameters
+                    if (typeof target === 'function') {
+                        const params = paramsStr ? paramsStr.trim().split(/\s+/).map(p => {
+                            const num = Number(p);
+                            return isNaN(num) ? p : num;
+                        }) : [];
+                        const result = target(...params);
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/2e406a9d-7ba3-4be3-8cb4-9dfba6495911',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'systemVariableProvider.ts:356',message:'Faker result',data:{path:path,params:params,result:result},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
+                        return { value: String(result) };
+                    } else {
+                        return { value: String(target) };
+                    }
+                } catch (error) {
+                    return { warning: `Faker error: ${error.message}` };
+                }
+            }
+            return { warning: ResolveWarningMessage.IncorrectFakerVariableFormat };
+        });
+    }
+
     private async resolveSettingsEnvironmentVariable(name: string) {
         if (await this.innerSettingsEnvironmentVariableProvider.has(name)) {
             const { value, error, warning } =  await this.innerSettingsEnvironmentVariableProvider.get(name);

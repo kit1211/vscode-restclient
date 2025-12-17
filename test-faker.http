@@ -1,0 +1,71 @@
+### Test Faker.js Integration
+# This file demonstrates the new Faker.js system variable feature
+### Basic Faker Usage - Simple methods without parameters
+POST https://jsonplaceholder.typicode.com/users HTTP/1.1
+Content-Type: application/json
+
+{
+  "email": "{{$faker.internet.email}}",
+  "username": "{{$faker.internet.username}}",
+  "name": "{{$faker.person.fullName}}",
+  "firstName": "{{$faker.person.firstName}}",
+  "lastName": "{{$faker.person.lastName}}",
+  "phone": "{{$faker.phone.number}}",
+  "website": "{{$faker.internet.url}}"
+}
+
+### Faker with Parameters - Random integer
+POST https://jsonplaceholder.typicode.com/posts HTTP/1.1
+Content-Type: application/json
+
+{
+  "userId": {{$faker.number.int 1 100}},
+  "title": "{{$faker.lorem.sentence}}",
+  "body": "{{$faker.lorem.paragraph}}"
+}
+
+### Complex Request with Multiple Faker Variables
+POST https://jsonplaceholder.typicode.com/posts HTTP/1.1
+Content-Type: application/json
+
+{
+  "id": "{{$faker.string.uuid}}",
+  "email": "{{$faker.internet.email}}",
+  "username": "{{$faker.internet.username}}",
+  "name": "{{$faker.person.fullName}}",
+  "age": {{$faker.number.int 18 65}},
+  "phone": "{{$faker.phone.number}}",
+  "address": {
+    "street": "{{$faker.location.streetAddress}}",
+    "city": "{{$faker.location.city}}",
+    "country": "{{$faker.location.country}}",
+    "zipCode": "{{$faker.location.zipCode}}"
+  },
+  "company": {
+    "name": "{{$faker.company.name}}",
+    "catchPhrase": "{{$faker.company.catchPhrase}}"
+  },
+  "bio": "{{$faker.lorem.paragraph}}",
+  "avatar": "{{$faker.image.avatar}}",
+  "registeredAt": "{{$faker.date.past}}",
+  "preferences": {
+    "theme": "{{$faker.color.human}}",
+    "language": "en"
+  }
+}
+
+### Testing Different Faker Modules
+GET https://jsonplaceholder.typicode.com/get?uuid={{$faker.string.uuid}}&color={{$faker.color.human}} HTTP/1.1
+
+### Date Generation
+POST https://jsonplaceholder.typicode.com/posts HTTP/1.1
+Content-Type: application/json
+
+{
+  "eventId": "{{$faker.string.uuid}}",
+  "title": "{{$faker.lorem.words}}",
+  "pastDate": "{{$faker.date.past}}",
+  "futureDate": "{{$faker.date.future}}",
+  "organizer": "{{$faker.person.fullName}}"
+}
+
