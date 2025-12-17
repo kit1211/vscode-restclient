@@ -36,6 +36,8 @@
     "REST",
     "Http",
     "GraphQL",
+    "faker",
+    "fake data",
     "multi-root ready"
   ],
   "activationEvents": [
@@ -721,7 +723,8 @@
     "webpack-cli": "^5.0.1"
   },
   "dependencies": {
-    "adal-node": "^0.2.4",
+    "@faker-js/faker": "^10.1.0",
+    "adal-node": "^0.2.1",
     "applicationinsights": "^1.0.5",
     "aws-amplify": "^5.0.3",
     "aws4": "^1.9.1",
@@ -737,10 +740,10 @@
     "highlight.js": "^10.4.1",
     "http-proxy-agent": "^2.1.0",
     "https-proxy-agent": "^2.2.3",
-    "httpsnippet": "^1.22.0",
+    "httpsnippet": "^2.0.0",
     "iconv-lite": "^0.4.15",
     "jsonc-parser": "^2.0.2",
-    "jsonpath-plus": "^0.20.1",
+    "jsonpath-plus": "^10.3.0",
     "mime-types": "^2.1.14",
     "node-fetch": "^2.6.7",
     "node-jws": "^0.1.4",
